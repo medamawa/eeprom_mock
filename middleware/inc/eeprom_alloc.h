@@ -27,9 +27,10 @@ uint16_t alloc_block(eeprom_directory_t *directory);
  * This will do nothing if the block is already freed.
  * 
  * @param directory 
- * @param id The id of block to be freed.
+ * @param ids The list of block ids to be freed.
+ * @param size The size of the list.
  */
-void free_block(eeprom_directory_t *directory, uint16_t id);
+void free_block(eeprom_directory_t *directory, uint16_t *ids, uint8_t size);
 
 /**
  * @brief 

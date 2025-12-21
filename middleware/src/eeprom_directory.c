@@ -11,11 +11,6 @@ static uint16_t *get_ids(eeprom_directory_t *directory, const uint8_t *key) {
 	return NULL;
 }
 
-// static eeprom_status_t put_ids_with_key(const eeprom_directory_t *directory, const uint8_t *key, const uint16_t *ids) {
-	
-// 	return EEPROM_OK;
-// }
-
 static uint8_t get_id_count(const uint16_t *ids) {
 	uint8_t count = 0;
 
@@ -72,33 +67,8 @@ eeprom_status_t get_directory_value(
 	if (ids == NULL) {
 		return EEPROM_ERROR_NOT_FOUND;
 	}
-	// TODO: check ids' availability
-	uint8_t id_count = get_id_count(ids);
 
-	out_size = malloc(sizeof(uint16_t));
-	if (out_size == NULL) {
-		return EEPROM_ERROR_ALLOCATION;
-	}
-	*out_size = BLOCK_SIZE * id_count;
-	out = malloc(*out_size);
-	if (out == NULL) {
-		return EEPROM_ERROR_ALLOCATION;
-	}
-
-	for (int i = 0; i < id_count; i++) {
-		uint16_t id = ids[i];
-		uint16_t addr = get_addr_for_data(id);
-		uint8_t *data_ptr = out + BLOCK_SIZE * id;
-		eeprom_status_t res;
-
-		res = m24c32_read(directory->device, addr, data_ptr, BLOCK_SIZE);
-		if (res != EEPROM_OK) {
-			free(out);
-			free(out_size);
-			return res;
-		}
-	}
-	return EEPROM_OK;
+	return get_data(directory, ids, out, out_size);
 }
 
 eeprom_status_t set_directory_value(
@@ -113,6 +83,7 @@ eeprom_status_t set_directory_value(
 	if (value_size <= 0) {
 		return EEPROM_ERROR;
 	}
+
 	uint16_t *ids = get_ids(directory, key);
 	if (ids == NULL) {
 		int block_count = (value_size - 1) / BLOCK_SIZE + 1;

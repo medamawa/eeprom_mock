@@ -1,5 +1,22 @@
 #include "eeprom_storage.h"
 
+static uint8_t get_id_count(const uint16_t *ids) {
+	uint8_t count = 0;
+
+	for (int i = 0; i < 4; i++) {
+		if (ids[i] >= BLOCK_COUNT) {
+			break;
+		}
+		count++;
+	}
+	return count;
+}
+
+static uint16_t get_addr_for_data(const uint16_t id) {
+	return DATA_SPACE_BEGIN + id * BLOCK_SIZE;
+}
+
+
 eeprom_status_t init_storage(eeprom_directory_t *directory) {
 	m24c32_t *device = directory->device;
 	directory_key_map_t *key_map = directory->key_map;
@@ -28,3 +45,37 @@ eeprom_status_t init_storage(eeprom_directory_t *directory) {
 	free(data);
 	return EEPROM_OK;
 }
+
+eeprom_status_t get_data(eeprom_directory_t *directory, const uint16_t *ids, uint8_t *out, uint16_t *out_size) {
+	m24c32_t *device = directory->device;
+	directory_key_map_t *key_map = directory->key_map;
+	uint8_t id_count = get_id_count(ids);
+	*out_size = BLOCK_SIZE * id_count;
+	if (out) {
+		free(out);
+	}
+	out = malloc(*out_size);
+	if (out == NULL) {
+		return EEPROM_ERROR_ALLOCATION;
+	}
+
+	for (int i = 0; i < id_count; i++) {
+		uint16_t id = ids[i];
+		if (check_availability(directory, id) == 0) {
+			free(out);
+			return EEPROM_ERROR_NOT_FOUND;
+		}
+
+		uint16_t addr = get_addr_for_data(id);
+		uint8_t *data_ptr = out + BLOCK_SIZE * id;
+		eeprom_status_t res;
+
+		res = m24c32_read(directory->device, addr, data_ptr, BLOCK_SIZE);
+		if (res != EEPROM_OK) {
+			free(out);
+			return res;
+		}
+	}
+	return EEPROM_OK;
+}
+

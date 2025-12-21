@@ -5,7 +5,7 @@ TARGET = eeprom_test
 
 SRCS =	general/src/m24c32.c \
 		middleware/src/eeprom_directory.c \
-		middleware/src/m24c32_eeprom_directory.c
+		middleware/src/eeprom_alloc.c
 
 OBJS = $(SRCS:.c=.o)
 

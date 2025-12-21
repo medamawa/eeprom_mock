@@ -26,6 +26,7 @@
 
 #include "m24c32.h"
 #include "eeprom_status.h"
+#include "eeprom_alloc.h"
 
 typedef struct {
 	uint8_t		key[4];

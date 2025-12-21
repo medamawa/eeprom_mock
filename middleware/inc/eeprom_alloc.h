@@ -1,6 +1,8 @@
 #ifndef EEPROM_ALLOC_H
 #define EEPROM_ALLOC_H
 
+#include <stdio.h>
+
 #include "eeprom_directory_struct.h"
 
 /**

@@ -47,8 +47,6 @@ eeprom_status_t init_storage(eeprom_directory_t *directory) {
 }
 
 eeprom_status_t get_data(eeprom_directory_t *directory, const uint16_t *ids, uint8_t *out, uint16_t *out_size) {
-	m24c32_t *device = directory->device;
-	directory_key_map_t *key_map = directory->key_map;
 	uint8_t id_count = get_id_count(ids);
 	*out_size = BLOCK_SIZE * id_count;
 	if (out) {

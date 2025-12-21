@@ -2,6 +2,7 @@
 
 #define byte_index(n) ((n) / 8)
 #define bit_index(n) ((n) % 8)
+#define nth_bit_mask(n) (1 << (n))
 
 
 static int get_alloc_table(uint8_t *table, uint16_t id) {

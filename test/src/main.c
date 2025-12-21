@@ -4,6 +4,7 @@
 #include <stdlib.h>
 
 #include "m24c32.h"
+#include "eeprom_directory.h"
 
 #define EEPROM_MOCK_FILENAME "eeprom_mock"
 
@@ -73,6 +74,7 @@ int main(void) {
 
 	printf("output: [%s]\n", output);
 
+	free(output);
 	close(g_mock_fd);
 	return 0;
 }

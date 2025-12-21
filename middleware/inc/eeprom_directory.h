@@ -1,6 +1,7 @@
 /**
  * @file eeprom_directory.h
  * @brief EEPROM Directory Management
+ * @author Sogo Nishihara
  * 
  * This file provides functions to initialize and manage an EEPROM directory with partitions.
  * Functions return `eeprom_status_t` error codes, which are defined in `eeprom_status.h`.
@@ -10,74 +11,52 @@
 #ifndef EEPROM_DIRECTORY_H
 #define EEPROM_DIRECTORY_H
 
-#include "eeprom_status.h"
-#include <stddef.h>
-#include <stdint.h>
+#define KEY_MAP_SIZE 8
+#define KEY_MAP_COUNT 128
+#define BLOCK_SIZE 4
+#define BLOCK_COUNT 512
+#define ALLOC_TABLE_BEGIN (KEY_MAP_SIZE * KEY_MAP_COUNT)
+#define ALLOC_TABLE_SIZE (BLOCK_COUNT / 8)
+#define DATA_SPACE_BEGIN (ALLOC_TABLE_BEGIN + ALLOC_TABLE_SIZE)
 
-struct partition_cfg {
-	const char *id; /* The ID of the partition */
-	uint16_t size; /* The size of the partition in bytes */
-	uint16_t address;
-	uint16_t head_address;
-};
+#include <stdlib.h>
+
+#include "m24c32.h"
+#include "eeprom_status.h"
 
 typedef struct {
-	struct partition_cfg *partitions;
-	size_t num_partitions;
+	uint8_t		key[4];
+	uint8_t		ids[4];
+} directory_key_map_t;
+
+typedef struct {
+	m24c32_t			*device;
+	directory_key_map_t key_map[KEY_MAP_COUNT];
+	uint8_t				alloc_table[ALLOC_TABLE_SIZE];
 } eeprom_directory_t;
 
-/**
- * @brief Initializes an EEPROM directory with partition IDs and sizes.
- * 
- * This function sets up partition configurations within the EEPROM memory.
- * The total allocated address space is calculated based on the provided partitions.
- *
- * @param directory Pointer to the EEPROM directory structure.
- * @param partitions Array of partition configurations, including IDs and sizes.
- * @param num_partitions Number of partitions to create.
- * @return eeprom_status_t Returns EEPROM_OK on success or an error code on failure. 
- */
-eeprom_status_t directory_init(eeprom_directory_t *directory,
-			       const struct partition_cfg partitions[],
-			       size_t num_partitions);
 
-/**
- * @brief Get the address of the beginning of a partition.
- *
- * This function searches for a partition by its name and returns its starting address.
- * 
- * @param directory Pointer to the EEPROM directory structure.
- * @param key Name of the partition.
- * @param address Pointer to store the retrieved base address.
- * @return eeprom_status_t Returns EEPROM_OK on success or an error code if the partition is not found.
- */
-eeprom_status_t eeprom_get_base_address(const eeprom_directory_t *directory,
-					const char *key, uint16_t *address);
+eeprom_status_t directory_init(
+	const m24c32_t *device,
+	eeprom_directory_t *directory
+);
 
-/**
- * @brief Get the current read/write head of a partition.
- *
- * This function provides the address of the next location available for writing within the partition.
- * 
- * @param directory Pointer to EEPROM directory struct.
- * @param key Name of the partition.
- * @param address Pointer to store the retrieved head address.
- * @return eeprom_status_t Returns EEPROM_OK on success or an error code if the partition is not found.
- */
-eeprom_status_t eeprom_get_head_address(const eeprom_directory_t *directory,
-					const char *key, uint16_t *address);
+eeprom_status_t get_directory_value(
+	eeprom_directory_t *directory,
+	const uint16_t key,
+	uint8_t *out
+);
 
-/**
- * @brief Get the size of a partition
- *
- * This function returns the allocated size of a specific partition in bytes.
- * 
- * @param directory Pointer to EEPROM directory struct.
- * @param key Name of a partition.
- * @param size Pointer to store the partition size.
- * @return eeprom_status_t Returns EEPROM_OK on success or an error code if the partition is not found.	
- */
-eeprom_status_t eeprom_get_size(const eeprom_directory_t *directory,
-				const char *key, uint16_t *size);
+eeprom_status_t set_directory_value(
+	eeprom_directory_t *directory,
+	const uint16_t key,
+	const uint8_t *value
+);
+
+eeprom_status_t delete_directory_value(
+	eeprom_directory_t *directory,
+	const uint16_t key
+);
+
 
 #endif // EEPROM_DIRECTORY_H

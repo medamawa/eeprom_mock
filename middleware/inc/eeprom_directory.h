@@ -11,13 +11,15 @@
 #ifndef EEPROM_DIRECTORY_H
 #define EEPROM_DIRECTORY_H
 
-#define KEY_MAP_SIZE 8
+#define KEY_MAP_STRUCT_SIZE 8
 #define KEY_MAP_COUNT 128
 #define BLOCK_SIZE 4
 #define BLOCK_COUNT 512
-#define ALLOC_TABLE_BEGIN (KEY_MAP_SIZE * KEY_MAP_COUNT)
+#define ALLOC_TABLE_BEGIN 0
 #define ALLOC_TABLE_SIZE (BLOCK_COUNT / 8)
-#define DATA_SPACE_BEGIN (ALLOC_TABLE_BEGIN + ALLOC_TABLE_SIZE)
+#define KEY_MAP_BEGIN (ALLOC_TABLE_BEGIN + ALLOC_TABLE_SIZE)
+#define KEY_MAP_SIZE (KEY_MAP_STRUCT_SIZE * KEY_MAP_COUNT)
+#define DATA_SPACE_BEGIN (KEY_MAP_BEGIN + KEY_MAP_SIZE)
 
 #include <stdlib.h>
 
@@ -32,7 +34,7 @@ typedef struct {
 typedef struct {
 	m24c32_t			*device;
 	directory_key_map_t key_map[KEY_MAP_COUNT];
-	uint8_t				alloc_table[ALLOC_TABLE_SIZE];
+	uint8_t				alloc_table[16];
 } eeprom_directory_t;
 
 

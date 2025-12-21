@@ -29,6 +29,12 @@ static eeprom_status_t update_eeprom_alloc_table(eeprom_directory_t *directory, 
 }
 
 
+eeprom_status_t init_alloc_table(eeprom_directory_t *directory) {
+	m24c32_t *device = directory->device;
+
+	return m24c32_read(device, ALLOC_TABLE_BEGIN, directory->alloc_table, ALLOC_TABLE_SIZE);
+}
+
 void print_alloc_table(eeprom_directory_t *directory) {
 	uint8_t *alloc_table = directory->alloc_table;
 	

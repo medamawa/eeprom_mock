@@ -45,12 +45,12 @@ eeprom_status_t directory_init(
 
 	directory->device = device;
 	eeprom_status_t res;
-	res = m24c32_read(device, ALLOC_TABLE_BEGIN, directory->alloc_table, ALLOC_TABLE_SIZE);
+	res = init_alloc_table(directory);
 	if (res != EEPROM_OK) {
 		free(directory);
 		return res;
 	}
-	res = m24c32_read(device, KEY_MAP_BEGIN, directory->key_map, KEY_MAP_SIZE);
+	res = init_storage(directory);
 	if (res != EEPROM_OK) {
 		free(directory);
 		return res;

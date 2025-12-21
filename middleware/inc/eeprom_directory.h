@@ -18,6 +18,7 @@
 #include "eeprom_status.h"
 #include "eeprom_directory_struct.h"
 #include "eeprom_alloc.h"
+#include "eeprom_storage.h"
 
 eeprom_status_t directory_init(
 	m24c32_t *device,

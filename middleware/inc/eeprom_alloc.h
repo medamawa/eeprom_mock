@@ -4,6 +4,14 @@
 #include "eeprom_directory_struct.h"
 
 /**
+ * @brief Gets alloc_table from eeprom memory.
+ * 
+ * @param directory 
+ * @return eeprom_status_t 
+ */
+eeprom_status_t init_alloc_table(eeprom_directory_t *directory);
+
+/**
  * @brief 
  * 
  * @param directory 

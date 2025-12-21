@@ -1,20 +1,20 @@
 #include "eeprom_directory.h"
 
-static uint16_t *get_ids(const eeprom_directory_t *directory, const uint8_t *key) {
-	const directory_key_map_t *key_map = directory->key_map;
+static uint16_t *get_ids(eeprom_directory_t *directory, const uint8_t *key) {
+	directory_key_map_t *key_map = directory->key_map;
 
 	for (int i = 0; i < KEY_MAP_COUNT; i++) {
-		if (strcmp(key_map[i].key, key) == 0) {
+		if (strcmp((char *)key_map[i].key, (char *)key) == 0) {
 			return key_map[i].ids;
 		}
 	}
 	return NULL;
 }
 
-static eeprom_status_t put_ids_with_key(const eeprom_directory_t *directory, const uint8_t *key, const uint16_t *ids) {
+// static eeprom_status_t put_ids_with_key(const eeprom_directory_t *directory, const uint8_t *key, const uint16_t *ids) {
 	
-	return EEPROM_OK;
-}
+// 	return EEPROM_OK;
+// }
 
 static uint8_t get_id_count(const uint16_t *ids) {
 	uint8_t count = 0;
@@ -33,31 +33,9 @@ static uint16_t get_addr_for_data(const uint16_t id) {
 	return DATA_SPACE_BEGIN + id * BLOCK_SIZE;
 }
 
-static eeprom_status_t put_one_block(const eeprom_directory_t *directory, const uint16_t id, const uint8_t *data) {
-	
-}
-
-// return id for block
-static uint16_t alloc_one_block_space(eeprom_directory_t *directory) {
-	m24c32_t *device = directory->device;
-	uint8_t *alloc_table = directory->alloc_table;
-
-	for (uint16_t i = 0; i < BLOCK_COUNT; i++) {
-		uint8_t byte_offset = i / 8;
-		uint8_t bit_offset = i % 8;
-		if ((*(alloc_table + byte_offset) & (1 << bit_offset)) == 0) {
-			*(alloc_table + byte_offset) += (1 << bit_offset);
-			uint16_t addr = ALLOC_TABLE_BEGIN + byte_offset;
-			m24c32_write(device, addr, *(alloc_table + byte_offset), 1);
-			return i;
-		}
-	}
-	return BLOCK_COUNT;
-}
-
 
 eeprom_status_t directory_init(
-	const m24c32_t *device,
+	m24c32_t *device,
 	eeprom_directory_t *directory
 ) {
 	directory = malloc(sizeof(eeprom_directory_t));
@@ -82,7 +60,7 @@ eeprom_status_t directory_init(
 
 eeprom_status_t get_directory_value(
 	eeprom_directory_t *directory,
-	const uint16_t *key,
+	const uint8_t *key,
 	uint8_t *out,
 	uint16_t *out_size
 ) {
@@ -101,8 +79,8 @@ eeprom_status_t get_directory_value(
 	if (out_size == NULL) {
 		return EEPROM_ERROR_ALLOCATION;
 	}
-	out_size = BLOCK_SIZE * id_count;
-	out = malloc(out_size);
+	*out_size = BLOCK_SIZE * id_count;
+	out = malloc(*out_size);
 	if (out == NULL) {
 		return EEPROM_ERROR_ALLOCATION;
 	}
@@ -110,7 +88,7 @@ eeprom_status_t get_directory_value(
 	for (int i = 0; i < id_count; i++) {
 		uint16_t id = ids[i];
 		uint16_t addr = get_addr_for_data(id);
-		uint8_t data_ptr = out + BLOCK_SIZE * id;
+		uint8_t *data_ptr = out + BLOCK_SIZE * id;
 		eeprom_status_t res;
 
 		res = m24c32_read(directory->device, addr, data_ptr, BLOCK_SIZE);
@@ -125,7 +103,7 @@ eeprom_status_t get_directory_value(
 
 eeprom_status_t set_directory_value(
 	eeprom_directory_t *directory,
-	const uint16_t *key,
+	const uint8_t *key,
 	const uint8_t *value,
 	const uint16_t value_size
 ) {

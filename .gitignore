@@ -1,3 +1,5 @@
+.DS_Store
 *.o
 
 eeprom_test
+eeprom_mock

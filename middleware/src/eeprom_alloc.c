@@ -59,9 +59,9 @@ uint16_t alloc_block(eeprom_directory_t *directory) {
 			put_alloc_table(alloc_table, id, 1);
 			eeprom_status_t ret = update_eeprom_alloc_table(directory, id);
 			if (ret != EEPROM_OK) {
-				printf("ERROR: failed to update eeprom allo table.\n");
+				printf("ERROR: failed to update eeprom alloc table.\n");
 				put_alloc_table(alloc_table, id, 0);
-				return BLOCK_SIZE;
+				return BLOCK_COUNT;
 			}
 			return id;
 		}
@@ -85,5 +85,6 @@ void free_block(eeprom_directory_t *directory, uint16_t *ids, uint8_t size) {
 int check_availability(eeprom_directory_t *directory, uint16_t id) {
 	uint8_t *alloc_table = directory->alloc_table;
 
-	return get_alloc_table(alloc_table, id) == 0;
+	// Returns 1 if block is allocated (available for use), 0 if free
+	return get_alloc_table(alloc_table, id) != 0;
 }

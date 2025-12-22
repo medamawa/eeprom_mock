@@ -29,7 +29,7 @@ eeprom_status_t directory_init(
 eeprom_status_t get_directory_value(
 	eeprom_directory_t *directory,
 	const uint8_t *key,
-	uint8_t *out,
+	uint8_t **out,
 	uint16_t *out_size
 );
 

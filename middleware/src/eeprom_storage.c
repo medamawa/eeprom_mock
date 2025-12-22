@@ -46,31 +46,40 @@ eeprom_status_t init_storage(eeprom_directory_t *directory) {
 	return EEPROM_OK;
 }
 
-eeprom_status_t get_data(eeprom_directory_t *directory, const uint16_t *ids, uint8_t *out, uint16_t *out_size) {
+eeprom_status_t get_data(eeprom_directory_t *directory, const uint16_t *ids, uint8_t **out, uint16_t *out_size) {
 	uint8_t id_count = get_id_count(ids);
 	*out_size = BLOCK_SIZE * id_count;
-	if (out) {
-		free(out);
+	
+	// Free existing buffer if provided
+	if (*out) {
+		free(*out);
+		*out = NULL;
 	}
-	out = malloc(*out_size);
-	if (out == NULL) {
+	
+	// Allocate new buffer
+	*out = malloc(*out_size);
+	if (*out == NULL) {
 		return EEPROM_ERROR_ALLOCATION;
 	}
 
 	for (int i = 0; i < id_count; i++) {
 		uint16_t id = ids[i];
+		// check_availability returns 1 if allocated, 0 if free
+		// We need the block to be allocated to read from it
 		if (check_availability(directory, id) == 0) {
-			free(out);
+			free(*out);
+			*out = NULL;
 			return EEPROM_ERROR_NOT_FOUND;
 		}
 
 		uint16_t addr = get_addr_for_data(id);
-		uint8_t *data_ptr = out + BLOCK_SIZE * i;
+		uint8_t *data_ptr = *out + BLOCK_SIZE * i;
 		eeprom_status_t res;
 
 		res = m24c32_read(directory->device, addr, data_ptr, BLOCK_SIZE);
 		if (res != EEPROM_OK) {
-			free(out);
+			free(*out);
+			*out = NULL;
 			return res;
 		}
 	}

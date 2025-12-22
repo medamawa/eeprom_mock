@@ -2,6 +2,7 @@
 #include <fcntl.h>
 #include <unistd.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include "m24c32.h"
 #include "eeprom_directory.h"
@@ -56,25 +57,17 @@ static m24c32_t setup_eeprom_mock() {
 
 int main(void) {
 	m24c32_t mock = setup_eeprom_mock();
+	eeprom_directory_t *directory = malloc(sizeof(eeprom_directory_t));
 
-	char *data = "hello";
-	
-	eeprom_status_t ret = m24c32_write(&mock, 0, (uint8_t *)data, sizeof(data));
-	if (ret != EEPROM_OK) {
-		printf("ERROR: Failed to write.\n");
-		exit(1);
-	}
+	// init eeprom mock
+	char *data = malloc(EEPROM_SIZE);
+	memset(data, 0, EEPROM_SIZE);
+	m24c32_write(&mock, 0, (uint8_t *)data, sizeof(data));
+	free(data);
 
-	uint8_t *output = malloc(sizeof(data) + 1);
-	ret = m24c32_read(&mock, 0, output, sizeof(data));
-	if (ret != EEPROM_OK) {
-		printf("ERROR: Failed to read.\n");
-		exit(1);
-	}
+	directory_init(&mock, directory);
+	print_alloc_table(directory);
 
-	printf("output: [%s]\n", output);
-
-	free(output);
 	close(g_mock_fd);
 	return 0;
 }

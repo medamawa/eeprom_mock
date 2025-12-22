@@ -13,6 +13,7 @@
 
 #include <stdlib.h>
 #include <stdio.h>
+#include <string.h>
 
 #include "m24c32.h"
 #include "eeprom_status.h"
@@ -35,7 +36,7 @@ eeprom_status_t get_directory_value(
 eeprom_status_t set_directory_value(
 	eeprom_directory_t *directory,
 	const uint8_t *key,
-	const uint8_t *value,
+	uint8_t *value,
 	const uint16_t value_size
 );
 

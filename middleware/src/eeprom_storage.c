@@ -65,7 +65,7 @@ eeprom_status_t get_data(eeprom_directory_t *directory, const uint16_t *ids, uin
 		}
 
 		uint16_t addr = get_addr_for_data(id);
-		uint8_t *data_ptr = out + BLOCK_SIZE * id;
+		uint8_t *data_ptr = out + BLOCK_SIZE * i;
 		eeprom_status_t res;
 
 		res = m24c32_read(directory->device, addr, data_ptr, BLOCK_SIZE);
@@ -77,3 +77,27 @@ eeprom_status_t get_data(eeprom_directory_t *directory, const uint16_t *ids, uin
 	return EEPROM_OK;
 }
 
+eeprom_status_t put_data(eeprom_directory_t *directory, const uint16_t *ids, uint8_t *value) {
+	uint8_t id_count = get_id_count(ids);
+
+	for (int i = 0; i < id_count; i++) {
+		uint16_t id = ids[i];
+
+		uint16_t addr = get_addr_for_data(id);
+		uint8_t *data_ptr = value + BLOCK_SIZE * i;
+		eeprom_status_t res;
+
+		res = m24c32_write(directory->device, addr, data_ptr, BLOCK_SIZE);
+		if (res != EEPROM_OK) {
+			return res;
+		}
+	}
+	return EEPROM_OK;
+}
+
+eeprom_status_t delete_data(eeprom_directory_t *directory, uint16_t *ids) {
+	uint8_t id_count = get_id_count(ids);
+
+	free_block(directory, ids, id_count);
+	return EEPROM_OK;
+}

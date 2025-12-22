@@ -68,6 +68,16 @@ int main(void) {
 	directory_init(&mock, directory);
 	print_alloc_table(directory);
 
+	char *key = "sogo";
+	uint8_t value = 116;
+	set_directory_value(directory, (uint8_t *)key, &value, 1);
+	print_alloc_table(directory);
+
+	uint8_t *out = NULL;
+	uint16_t out_size;
+	get_directory_value(directory, (uint8_t *)key, out, &out_size);
+	print_alloc_table(directory);
+
 	close(g_mock_fd);
 	return 0;
 }

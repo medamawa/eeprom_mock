@@ -1,4 +1,5 @@
 #include "eeprom_storage.h"
+#include <string.h>
 
 static uint8_t get_id_count(const uint16_t *ids) {
 	uint8_t count = 0;
@@ -86,21 +87,41 @@ eeprom_status_t get_data(eeprom_directory_t *directory, const uint16_t *ids, uin
 	return EEPROM_OK;
 }
 
-eeprom_status_t put_data(eeprom_directory_t *directory, const uint16_t *ids, uint8_t *value) {
+eeprom_status_t put_data(eeprom_directory_t *directory, const uint16_t *ids, uint8_t *value, uint16_t value_size) {
 	uint8_t id_count = get_id_count(ids);
+	uint8_t *block_buffer = malloc(BLOCK_SIZE);
+	if (block_buffer == NULL) {
+		return EEPROM_ERROR_ALLOCATION;
+	}
 
 	for (int i = 0; i < id_count; i++) {
 		uint16_t id = ids[i];
-
 		uint16_t addr = get_addr_for_data(id);
-		uint8_t *data_ptr = value + BLOCK_SIZE * i;
-		eeprom_status_t res;
-
-		res = m24c32_write(directory->device, addr, data_ptr, BLOCK_SIZE);
+		
+		// Calculate how many bytes to copy for this block
+		uint16_t offset = i * BLOCK_SIZE;
+		uint16_t bytes_to_copy = BLOCK_SIZE;
+		if (offset + BLOCK_SIZE > value_size) {
+			bytes_to_copy = value_size - offset;
+		}
+		
+		// Clear the block buffer
+		memset(block_buffer, 0, BLOCK_SIZE);
+		
+		// Copy the actual data
+		if (bytes_to_copy > 0) {
+			memcpy(block_buffer, value + offset, bytes_to_copy);
+		}
+		
+		// Write the entire block (BLOCK_SIZE bytes) to EEPROM
+		eeprom_status_t res = m24c32_write(directory->device, addr, block_buffer, BLOCK_SIZE);
 		if (res != EEPROM_OK) {
+			free(block_buffer);
 			return res;
 		}
 	}
+	
+	free(block_buffer);
 	return EEPROM_OK;
 }
 

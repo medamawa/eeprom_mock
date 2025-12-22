@@ -143,7 +143,7 @@ eeprom_status_t set_directory_value(
 		return res;
 	}
 	
-	res = put_data(directory, ids, value);
+	res = put_data(directory, ids, value, value_size);
 	if (res != EEPROM_OK) {
 		// Free allocated blocks and remove key on failure
 		free_block(directory, ids, block_count);

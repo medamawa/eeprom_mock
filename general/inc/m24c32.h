@@ -15,13 +15,36 @@
 #include <stdint.h>
 #include <string.h>
 
+/**
+ * @brief Function pointer type for EEPROM write operations.
+ * 
+ * @param addr Memory address where data should be written.
+ * @param data Pointer to the data buffer to write.
+ * @param len Number of bytes to write.
+ * @return eeprom_status_t Returns EEPROM_OK on success, or an error code on failure.
+ */
 typedef eeprom_status_t (*write_ptr)(uint16_t addr, uint8_t *data,
 				     uint16_t len);
+
+/**
+ * @brief Function pointer type for EEPROM read operations.
+ * 
+ * @param addr Memory address from which data should be read.
+ * @param data Pointer to the buffer where data will be stored.
+ * @param len Number of bytes to read.
+ * @return eeprom_status_t Returns EEPROM_OK on success, or an error code on failure.
+ */
 typedef eeprom_status_t (*read_ptr)(uint16_t addr, uint8_t *data, uint16_t len);
 
+/**
+ * @brief M24C32 EEPROM device interface structure.
+ * 
+ * This structure contains function pointers for read and write operations,
+ * allowing the EEPROM driver to work with different hardware implementations.
+ */
 typedef struct {
-	write_ptr write;
-	read_ptr read;
+	write_ptr write;	/**< Function pointer for write operations. */
+	read_ptr read;		/**< Function pointer for read operations. */
 } m24c32_t;
 
 /**

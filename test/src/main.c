@@ -181,6 +181,31 @@ int main(void) {
 	printf("\n=== Final State ===\n");
 	print_alloc_table(directory);
 
+	// Test 15: Store a char string ("ABCD") as bytes
+	uint8_t str_value[] = {'A', 'B', 'C', 'D'};
+	test_set_value(directory, "str1", str_value, sizeof(str_value), "Store char array (\"ABCD\")");
+	test_get_value(directory, "str1", "Get char array (\"ABCD\")");
+
+	// Test 16: Store a C-string with null terminator ("XYZ\\0")
+	uint8_t cstr_value[] = {'X', 'Y', 'Z', '\0'};
+	test_set_value(directory, "cstr", cstr_value, sizeof(cstr_value), "Store C-string with NUL terminator (\"XYZ\\0\")");
+	test_get_value(directory, "cstr", "Get C-string with NUL terminator");
+
+	// Test 17: Store an int as 4 bytes (little-endian)
+	uint32_t num = 0x12345678;
+	uint8_t int_bytes[4];
+	int_bytes[0] = (uint8_t)(num & 0xFF);
+	int_bytes[1] = (uint8_t)((num >> 8) & 0xFF);
+	int_bytes[2] = (uint8_t)((num >> 16) & 0xFF);
+	int_bytes[3] = (uint8_t)((num >> 24) & 0xFF);
+	test_set_value(directory, "int1", int_bytes, sizeof(int_bytes), "Store 32-bit int as 4 bytes");
+	test_get_value(directory, "int1", "Get 32-bit int as 4 bytes");
+
+	// Cleanup of extra test keys
+	test_delete_value(directory, "str1", "Delete char array key");
+	test_delete_value(directory, "cstr", "Delete C-string key");
+	test_delete_value(directory, "int1", "Delete int key");
+
 	// Test 14: Error case - null pointer
 	printf("\n=== Test: Error handling - null pointer ===\n");
 	res = get_directory_value(NULL, (uint8_t *)"test", NULL, NULL);

@@ -1,6 +1,4 @@
 #include <stdio.h>
-#include <fcntl.h>
-#include <unistd.h>
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
@@ -8,46 +6,42 @@
 #include "m24c32.h"
 #include "eeprom_directory.h"
 
-#define EEPROM_MOCK_FILENAME "eeprom_mock"
-
-int g_mock_fd;
+static uint8_t *g_mock_memory = NULL;
 
 eeprom_status_t mock_eeprom_read(uint16_t addr, uint8_t *data, uint16_t len) {
-	if (g_mock_fd < 0)
+	if (g_mock_memory == NULL)
 		return EEPROM_ERROR;
 	
-	if (lseek(g_mock_fd, addr, SEEK_SET) < 0)
+	if (addr + len > EEPROM_SIZE)
 		return EEPROM_ERROR;
 	
-	ssize_t n = read(g_mock_fd, data, len);
-	if (n != len)
-		return EEPROM_ERROR;
-	
+	memcpy(data, &g_mock_memory[addr], len);
 	printf("[READ] addr: %d, len: %d\n", addr, len);
 	return EEPROM_OK;
 }
 
 eeprom_status_t mock_eeprom_write(uint16_t addr, uint8_t *data, uint16_t len) {
-	if (g_mock_fd < 0)
+	if (g_mock_memory == NULL)
 		return EEPROM_ERROR;
 
-	if (lseek(g_mock_fd, addr, SEEK_SET) < 0)
+	if (addr + len > EEPROM_SIZE)
 		return EEPROM_ERROR;
 
-	ssize_t n = write(g_mock_fd, data, len);
-	if (n != len)
-		return EEPROM_ERROR;
-
+	memcpy(&g_mock_memory[addr], data, len);
 	printf("[WRITE] addr: %d, len: %d\n", addr, len);
 	return EEPROM_OK;
 }
 
 static m24c32_t setup_eeprom_mock() {
-	g_mock_fd = open(EEPROM_MOCK_FILENAME, O_RDWR | O_CREAT, 0666);
-	if (g_mock_fd < 0) {
-		printf("ERROR: Failed to open file.\n");
+	// Allocate memory for EEPROM simulation
+	g_mock_memory = (uint8_t *)malloc(EEPROM_SIZE);
+	if (g_mock_memory == NULL) {
+		printf("ERROR: Failed to allocate memory for EEPROM mock.\n");
 		exit(1);
 	}
+	
+	// Initialize with zeros
+	memset(g_mock_memory, 0, EEPROM_SIZE);
 
 	m24c32_t mock;
 	mock.read = mock_eeprom_read;
@@ -129,12 +123,7 @@ static eeprom_directory_t* setup_test_environment(m24c32_t *mock) {
 		return NULL;
 	}
 
-	// Initialize eeprom mock with zeros
-	char *data = malloc(EEPROM_SIZE);
-	memset(data, 0, EEPROM_SIZE);
-	m24c32_write(mock, 0, (uint8_t *)data, EEPROM_SIZE);
-	free(data);
-
+	// EEPROM mock memory is already initialized to zeros in setup_eeprom_mock()
 	// Initialize directory
 	eeprom_status_t res = directory_init(mock, directory);
 	if (res != EEPROM_OK) {
@@ -150,10 +139,10 @@ static void cleanup_test_environment(eeprom_directory_t *directory) {
 	if (directory) {
 		free(directory);
 	}
-	if (g_mock_fd >= 0) {
-		close(g_mock_fd);
+	if (g_mock_memory) {
+		free(g_mock_memory);
+		g_mock_memory = NULL;
 	}
-	unlink(EEPROM_MOCK_FILENAME);
 }
 
 static void run_basic_tests(eeprom_directory_t *directory) {

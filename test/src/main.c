@@ -270,6 +270,160 @@ static void run_error_tests(void) {
 	printf("[DELETE] NULL directory - status: %d (expected: %d)\n", res, EEPROM_ERROR_NULL_POINTER);
 }
 
+static void run_stress_tests(eeprom_directory_t *directory) {
+	printf("\n=== Stress Test: Multiple keys operations ===\n");
+	
+	const int num_keys = 50;
+	char key_buf[32];
+	uint8_t value = 0;
+	
+	struct timespec start_all, end_all;
+	clock_gettime(CLOCK_MONOTONIC, &start_all);
+	
+	// Set many keys
+	printf("Setting %d keys...\n", num_keys);
+	for (int i = 0; i < num_keys; i++) {
+		snprintf(key_buf, sizeof(key_buf), "key_%03d", i);
+		value = (uint8_t)(i % 256);
+		eeprom_status_t res = set_directory_value(directory, (uint8_t *)key_buf, &value, 1);
+		if (res != EEPROM_OK) {
+			printf("ERROR: Failed to set key %s at index %d\n", key_buf, i);
+			break;
+		}
+	}
+	
+	// Get all keys
+	printf("Getting %d keys...\n", num_keys);
+	for (int i = 0; i < num_keys; i++) {
+		snprintf(key_buf, sizeof(key_buf), "key_%03d", i);
+		uint8_t *out = NULL;
+		uint16_t out_size;
+		eeprom_status_t res = get_directory_value(directory, (uint8_t *)key_buf, &out, &out_size);
+		if (res == EEPROM_OK && out != NULL) {
+			if (out[0] != (uint8_t)(i % 256)) {
+				printf("ERROR: Value mismatch for key %s: expected %d, got %d\n", key_buf, i % 256, out[0]);
+			}
+			free(out);
+		} else {
+			printf("ERROR: Failed to get key %s at index %d\n", key_buf, i);
+		}
+	}
+	
+	// Delete all keys
+	printf("Deleting %d keys...\n", num_keys);
+	for (int i = 0; i < num_keys; i++) {
+		snprintf(key_buf, sizeof(key_buf), "key_%03d", i);
+		eeprom_status_t res = delete_directory_value(directory, (const uint8_t *)key_buf);
+		if (res != EEPROM_OK) {
+			printf("ERROR: Failed to delete key %s at index %d\n", key_buf, i);
+		}
+	}
+	
+	clock_gettime(CLOCK_MONOTONIC, &end_all);
+	double total_time = measure_time_us(&start_all, &end_all);
+	printf("Stress test completed: %d keys (set/get/delete) in %.3f us (%.3f ms)\n", 
+	       num_keys, total_time, total_time / 1000.0);
+	
+	printf("\n=== Stress Test: Large data operations ===\n");
+	
+	const int large_data_size = 100;
+	uint8_t *large_data = malloc(large_data_size);
+	if (large_data) {
+		// Fill with pattern
+		for (int i = 0; i < large_data_size; i++) {
+			large_data[i] = (uint8_t)(i % 256);
+		}
+		
+		struct timespec start, end;
+		clock_gettime(CLOCK_MONOTONIC, &start);
+		
+		eeprom_status_t res = set_directory_value(directory, (uint8_t *)"large_data", large_data, large_data_size);
+		
+		clock_gettime(CLOCK_MONOTONIC, &end);
+		double set_time = measure_time_us(&start, &end);
+		
+		if (res == EEPROM_OK) {
+			printf("Set large data (%d bytes) - Time: %.3f us (%.3f ms)\n", 
+			       large_data_size, set_time, set_time / 1000.0);
+			
+			clock_gettime(CLOCK_MONOTONIC, &start);
+			
+			uint8_t *out = NULL;
+			uint16_t out_size;
+			res = get_directory_value(directory, (uint8_t *)"large_data", &out, &out_size);
+			
+			clock_gettime(CLOCK_MONOTONIC, &end);
+			double get_time = measure_time_us(&start, &end);
+			
+			if (res == EEPROM_OK && out != NULL) {
+				// Verify data
+				int mismatch = 0;
+				for (int i = 0; i < large_data_size && i < out_size; i++) {
+					if (out[i] != large_data[i]) {
+						mismatch++;
+					}
+				}
+				
+				if (mismatch == 0 && out_size == large_data_size) {
+					printf("Get large data (%d bytes) - Time: %.3f us (%.3f ms) - Verified OK\n", 
+					       large_data_size, get_time, get_time / 1000.0);
+				} else {
+					printf("ERROR: Data mismatch or size mismatch (mismatches: %d, size: %d vs %d)\n", 
+					       mismatch, out_size, large_data_size);
+				}
+				free(out);
+			} else {
+				printf("ERROR: Failed to get large data\n");
+			}
+			
+			delete_directory_value(directory, (const uint8_t *)"large_data");
+		} else {
+			printf("ERROR: Failed to set large data\n");
+		}
+		
+		free(large_data);
+	}
+	
+	printf("\n=== Stress Test: Repeated overwrite operations ===\n");
+	
+	uint8_t test_value = 0;
+	const int overwrite_count = 100;
+	
+	struct timespec start, end;
+	clock_gettime(CLOCK_MONOTONIC, &start);
+	
+	for (int i = 0; i < overwrite_count; i++) {
+		test_value = (uint8_t)(i % 256);
+		eeprom_status_t res = set_directory_value(directory, (uint8_t *)"overwrite_key", &test_value, 1);
+		if (res != EEPROM_OK) {
+			printf("ERROR: Failed to overwrite at iteration %d\n", i);
+			break;
+		}
+	}
+	
+	clock_gettime(CLOCK_MONOTONIC, &end);
+	double overwrite_time = measure_time_us(&start, &end);
+	
+	printf("Repeated overwrite (%d times) - Total time: %.3f us (%.3f ms), Avg: %.3f us per operation\n", 
+	       overwrite_count, overwrite_time, overwrite_time / 1000.0, overwrite_time / overwrite_count);
+	
+	// Verify final value
+	uint8_t *out = NULL;
+	uint16_t out_size;
+	eeprom_status_t res = get_directory_value(directory, (uint8_t *)"overwrite_key", &out, &out_size);
+	if (res == EEPROM_OK && out != NULL) {
+		uint8_t expected = (uint8_t)((overwrite_count - 1) % 256);
+		if (out[0] == expected) {
+			printf("Final value verified: %d (expected: %d)\n", out[0], expected);
+		} else {
+			printf("ERROR: Final value mismatch: got %d, expected %d\n", out[0], expected);
+		}
+		free(out);
+	}
+	
+	delete_directory_value(directory, (const uint8_t *)"overwrite_key");
+}
+
 int main(void) {
 	printf("========================================\n");
 	printf("EEPROM Directory Test Suite\n");
@@ -289,6 +443,7 @@ int main(void) {
 	run_delete_tests(directory);
 	run_data_type_tests(directory);
 	run_error_tests();
+	run_stress_tests(directory);
 
 	printf("\n========================================\n");
 	printf("All tests completed\n");

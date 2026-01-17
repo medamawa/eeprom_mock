@@ -3,6 +3,7 @@
 #include <unistd.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 
 #include "m24c32.h"
 #include "eeprom_directory.h"
@@ -55,70 +56,107 @@ static m24c32_t setup_eeprom_mock() {
 }
 
 
+static double measure_time_us(struct timespec *start, struct timespec *end) {
+	long elapsed_ns = (end->tv_sec - start->tv_sec) * 1000000000L + (end->tv_nsec - start->tv_nsec);
+	return elapsed_ns / 1000.0;
+}
+
 static void test_get_value(eeprom_directory_t *directory, const char *key, const char *test_name) {
 	printf("\n=== Test: %s ===\n", test_name);
+	
+	struct timespec start, end;
+	clock_gettime(CLOCK_MONOTONIC, &start);
+	
 	uint8_t *out = NULL;
 	uint16_t out_size;
 	eeprom_status_t res = get_directory_value(directory, (uint8_t *)key, &out, &out_size);
+	
+	clock_gettime(CLOCK_MONOTONIC, &end);
+	double elapsed_us = measure_time_us(&start, &end);
+	
 	if (res == EEPROM_OK && out != NULL) {
 		printf("[GET] key: %s, size: %d, data: ", key, out_size);
 		for (uint16_t i = 0; i < out_size; i++) {
 			printf("%d ", out[i]);
 		}
-		printf("\n");
+		printf("- Time: %.3f us\n", elapsed_us);
 		free(out);
 		out = NULL;
 	} else {
-		printf("[GET] Failed - key: %s, status: %d\n", key, res);
+		printf("[GET] Failed - key: %s, status: %d - Time: %.3f us\n", key, res, elapsed_us);
 	}
 }
 
 static void test_set_value(eeprom_directory_t *directory, const char *key, uint8_t *value, uint16_t value_size, const char *test_name) {
 	printf("\n=== Test: %s ===\n", test_name);
+	
+	struct timespec start, end;
+	clock_gettime(CLOCK_MONOTONIC, &start);
+	
 	eeprom_status_t res = set_directory_value(directory, (uint8_t *)key, value, value_size);
+	
+	clock_gettime(CLOCK_MONOTONIC, &end);
+	double elapsed_us = measure_time_us(&start, &end);
+	
 	if (res == EEPROM_OK) {
-		printf("[SET] key: %s, size: %d - SUCCESS\n", key, value_size);
+		printf("[SET] key: %s, size: %d - SUCCESS - Time: %.3f us\n", key, value_size, elapsed_us);
 	} else {
-		printf("[SET] key: %s, size: %d - FAILED with status: %d\n", key, value_size, res);
+		printf("[SET] key: %s, size: %d - FAILED with status: %d - Time: %.3f us\n", key, value_size, res, elapsed_us);
 	}
 }
 
 static void test_delete_value(eeprom_directory_t *directory, const char *key, const char *test_name) {
 	printf("\n=== Test: %s ===\n", test_name);
+	
+	struct timespec start, end;
+	clock_gettime(CLOCK_MONOTONIC, &start);
+	
 	eeprom_status_t res = delete_directory_value(directory, (const uint8_t *)key);
+	
+	clock_gettime(CLOCK_MONOTONIC, &end);
+	double elapsed_us = measure_time_us(&start, &end);
+	
 	if (res == EEPROM_OK) {
-		printf("[DELETE] key: %s - SUCCESS\n", key);
+		printf("[DELETE] key: %s - SUCCESS - Time: %.3f us\n", key, elapsed_us);
 	} else {
-		printf("[DELETE] key: %s - FAILED with status: %d\n", key, res);
+		printf("[DELETE] key: %s - FAILED with status: %d - Time: %.3f us\n", key, res, elapsed_us);
 	}
 }
 
-int main(void) {
-	printf("========================================\n");
-	printf("EEPROM Directory Test Suite\n");
-	printf("========================================\n");
-
-	m24c32_t mock = setup_eeprom_mock();
+static eeprom_directory_t* setup_test_environment(m24c32_t *mock) {
 	eeprom_directory_t *directory = malloc(sizeof(eeprom_directory_t));
+	if (!directory) {
+		return NULL;
+	}
 
 	// Initialize eeprom mock with zeros
 	char *data = malloc(EEPROM_SIZE);
 	memset(data, 0, EEPROM_SIZE);
-	m24c32_write(&mock, 0, (uint8_t *)data, EEPROM_SIZE);
+	m24c32_write(mock, 0, (uint8_t *)data, EEPROM_SIZE);
 	free(data);
 
 	// Initialize directory
-	eeprom_status_t res = directory_init(&mock, directory);
+	eeprom_status_t res = directory_init(mock, directory);
 	if (res != EEPROM_OK) {
 		printf("ERROR: Failed to initialize directory: %d\n", res);
 		free(directory);
-		close(g_mock_fd);
-		unlink(EEPROM_MOCK_FILENAME);
-		return 1;
+		return NULL;
 	}
-	printf("\n=== Initial State ===\n");
-	print_alloc_table(directory);
 
+	return directory;
+}
+
+static void cleanup_test_environment(eeprom_directory_t *directory) {
+	if (directory) {
+		free(directory);
+	}
+	if (g_mock_fd >= 0) {
+		close(g_mock_fd);
+	}
+	unlink(EEPROM_MOCK_FILENAME);
+}
+
+static void run_basic_tests(eeprom_directory_t *directory) {
 	// Test 1: Set a single byte value
 	uint8_t value1 = 116;
 	test_set_value(directory, "sogo", &value1, 1, "Set single byte value");
@@ -150,7 +188,9 @@ int main(void) {
 	uint8_t new_value = 200;
 	test_set_value(directory, "sogo", &new_value, 1, "Overwrite existing value");
 	test_get_value(directory, "sogo", "Get overwritten value");
+}
 
+static void run_delete_tests(eeprom_directory_t *directory) {
 	// Test 7: Delete a value
 	test_delete_value(directory, "test", "Delete existing key");
 	print_alloc_table(directory);
@@ -180,7 +220,9 @@ int main(void) {
 	// Test 13: Verify all blocks are freed
 	printf("\n=== Final State ===\n");
 	print_alloc_table(directory);
+}
 
+static void run_data_type_tests(eeprom_directory_t *directory) {
 	// Test 15: Store a char string ("ABCD") as bytes
 	uint8_t str_value[] = {'A', 'B', 'C', 'D'};
 	test_set_value(directory, "str1", str_value, sizeof(str_value), "Store char array (\"ABCD\")");
@@ -201,14 +243,24 @@ int main(void) {
 	test_set_value(directory, "int1", int_bytes, sizeof(int_bytes), "Store 32-bit int as 4 bytes");
 	test_get_value(directory, "int1", "Get 32-bit int as 4 bytes");
 
+	// Test 18: Store char[] cast to uint8_t*
+	char char_array[] = {'H', 'e', 'l', 'l', 'o'};
+	test_set_value(directory, "char_cast", (uint8_t *)char_array, sizeof(char_array), "Store char[] cast to uint8_t*");
+	test_get_value(directory, "char_cast", "Get char[] cast to uint8_t*");
+
 	// Cleanup of extra test keys
 	test_delete_value(directory, "str1", "Delete char array key");
 	test_delete_value(directory, "cstr", "Delete C-string key");
 	test_delete_value(directory, "int1", "Delete int key");
+	test_delete_value(directory, "char_cast", "Delete char cast key");
+}
 
+static void run_error_tests(void) {
 	// Test 14: Error case - null pointer
 	printf("\n=== Test: Error handling - null pointer ===\n");
-	res = get_directory_value(NULL, (uint8_t *)"test", NULL, NULL);
+	uint8_t value1 = 116;
+	
+	eeprom_status_t res = get_directory_value(NULL, (uint8_t *)"test", NULL, NULL);
 	printf("[GET] NULL directory - status: %d (expected: %d)\n", res, EEPROM_ERROR_NULL_POINTER);
 
 	res = set_directory_value(NULL, (uint8_t *)"test", &value1, 1);
@@ -216,13 +268,32 @@ int main(void) {
 
 	res = delete_directory_value(NULL, (const uint8_t *)"test");
 	printf("[DELETE] NULL directory - status: %d (expected: %d)\n", res, EEPROM_ERROR_NULL_POINTER);
+}
+
+int main(void) {
+	printf("========================================\n");
+	printf("EEPROM Directory Test Suite\n");
+	printf("========================================\n");
+
+	m24c32_t mock = setup_eeprom_mock();
+	eeprom_directory_t *directory = setup_test_environment(&mock);
+	if (!directory) {
+		cleanup_test_environment(NULL);
+		return 1;
+	}
+
+	printf("\n=== Initial State ===\n");
+	print_alloc_table(directory);
+
+	run_basic_tests(directory);
+	run_delete_tests(directory);
+	run_data_type_tests(directory);
+	run_error_tests();
 
 	printf("\n========================================\n");
 	printf("All tests completed\n");
 	printf("========================================\n");
 
-	free(directory);
-	close(g_mock_fd);
-	unlink(EEPROM_MOCK_FILENAME);
+	cleanup_test_environment(directory);
 	return 0;
 }

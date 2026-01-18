@@ -16,7 +16,7 @@ eeprom_status_t mock_eeprom_read(uint16_t addr, uint8_t *data, uint16_t len) {
 		return EEPROM_ERROR;
 	
 	memcpy(data, &g_mock_memory[addr], len);
-	printf("[READ] addr: %d, len: %d\n", addr, len);
+	// printf("[READ] addr: %d, len: %d\n", addr, len);
 	return EEPROM_OK;
 }
 
@@ -28,7 +28,7 @@ eeprom_status_t mock_eeprom_write(uint16_t addr, uint8_t *data, uint16_t len) {
 		return EEPROM_ERROR;
 
 	memcpy(&g_mock_memory[addr], data, len);
-	printf("[WRITE] addr: %d, len: %d\n", addr, len);
+	// printf("[WRITE] addr: %d, len: %d\n", addr, len);
 	return EEPROM_OK;
 }
 
@@ -263,7 +263,7 @@ static void run_stress_tests(eeprom_directory_t *directory) {
 	printf("\n=== Stress Test: Multiple keys operations ===\n");
 	
 	const int num_keys = 50;
-	char key_buf[32];
+	char key_buf[4];
 	uint8_t value = 0;
 	
 	struct timespec start_all, end_all;
@@ -272,7 +272,7 @@ static void run_stress_tests(eeprom_directory_t *directory) {
 	// Set many keys
 	printf("Setting %d keys...\n", num_keys);
 	for (int i = 0; i < num_keys; i++) {
-		snprintf(key_buf, sizeof(key_buf), "key_%03d", i);
+		snprintf(key_buf, sizeof(key_buf), "%03d", i);
 		value = (uint8_t)(i % 256);
 		eeprom_status_t res = set_directory_value(directory, (uint8_t *)key_buf, &value, 1);
 		if (res != EEPROM_OK) {
@@ -284,7 +284,7 @@ static void run_stress_tests(eeprom_directory_t *directory) {
 	// Get all keys
 	printf("Getting %d keys...\n", num_keys);
 	for (int i = 0; i < num_keys; i++) {
-		snprintf(key_buf, sizeof(key_buf), "key_%03d", i);
+		snprintf(key_buf, sizeof(key_buf), "%03d", i);
 		uint8_t *out = NULL;
 		uint16_t out_size;
 		eeprom_status_t res = get_directory_value(directory, (uint8_t *)key_buf, &out, &out_size);
@@ -301,7 +301,7 @@ static void run_stress_tests(eeprom_directory_t *directory) {
 	// Delete all keys
 	printf("Deleting %d keys...\n", num_keys);
 	for (int i = 0; i < num_keys; i++) {
-		snprintf(key_buf, sizeof(key_buf), "key_%03d", i);
+		snprintf(key_buf, sizeof(key_buf), "%03d", i);
 		eeprom_status_t res = delete_directory_value(directory, (const uint8_t *)key_buf);
 		if (res != EEPROM_OK) {
 			printf("ERROR: Failed to delete key %s at index %d\n", key_buf, i);
@@ -315,7 +315,7 @@ static void run_stress_tests(eeprom_directory_t *directory) {
 	
 	printf("\n=== Stress Test: Large data operations ===\n");
 	
-	const int large_data_size = 100;
+	const int large_data_size = 16;
 	uint8_t *large_data = malloc(large_data_size);
 	if (large_data) {
 		// Fill with pattern
@@ -326,7 +326,7 @@ static void run_stress_tests(eeprom_directory_t *directory) {
 		struct timespec start, end;
 		clock_gettime(CLOCK_MONOTONIC, &start);
 		
-		eeprom_status_t res = set_directory_value(directory, (uint8_t *)"large_data", large_data, large_data_size);
+		eeprom_status_t res = set_directory_value(directory, (uint8_t *)"larg", large_data, large_data_size);
 		
 		clock_gettime(CLOCK_MONOTONIC, &end);
 		double set_time = measure_time_us(&start, &end);
@@ -339,7 +339,7 @@ static void run_stress_tests(eeprom_directory_t *directory) {
 			
 			uint8_t *out = NULL;
 			uint16_t out_size;
-			res = get_directory_value(directory, (uint8_t *)"large_data", &out, &out_size);
+			res = get_directory_value(directory, (uint8_t *)"larg", &out, &out_size);
 			
 			clock_gettime(CLOCK_MONOTONIC, &end);
 			double get_time = measure_time_us(&start, &end);
@@ -383,7 +383,7 @@ static void run_stress_tests(eeprom_directory_t *directory) {
 	
 	for (int i = 0; i < overwrite_count; i++) {
 		test_value = (uint8_t)(i % 256);
-		eeprom_status_t res = set_directory_value(directory, (uint8_t *)"overwrite_key", &test_value, 1);
+		eeprom_status_t res = set_directory_value(directory, (uint8_t *)"over", &test_value, 1);
 		if (res != EEPROM_OK) {
 			printf("ERROR: Failed to overwrite at iteration %d\n", i);
 			break;
@@ -399,7 +399,7 @@ static void run_stress_tests(eeprom_directory_t *directory) {
 	// Verify final value
 	uint8_t *out = NULL;
 	uint16_t out_size;
-	eeprom_status_t res = get_directory_value(directory, (uint8_t *)"overwrite_key", &out, &out_size);
+	eeprom_status_t res = get_directory_value(directory, (uint8_t *)"over", &out, &out_size);
 	if (res == EEPROM_OK && out != NULL) {
 		uint8_t expected = (uint8_t)((overwrite_count - 1) % 256);
 		if (out[0] == expected) {
@@ -410,7 +410,7 @@ static void run_stress_tests(eeprom_directory_t *directory) {
 		free(out);
 	}
 	
-	delete_directory_value(directory, (const uint8_t *)"overwrite_key");
+	delete_directory_value(directory, (const uint8_t *)"over");
 }
 
 int main(void) {

@@ -46,7 +46,7 @@ eeprom_status_t directory_init(m24c32_t *device, eeprom_directory_t *directory);
 
 **Parameters:**
 - `device`: Pointer to the M24C32 device interface
-- `directory`: Pointer to the directory structure to initialize (must be allocated by caller)
+- `directory`: Pointer to the directory structure to initialize *(must be allocated by caller)*
 
 **Return Values:**
 - `EEPROM_OK`: Initialization successful

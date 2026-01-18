@@ -16,8 +16,11 @@ The EEPROM Directory API provides a simple interface for managing a key-value di
 ### Inputs
 
 - **Key**: A fixed-size 4-byte key (not a null-terminated string)
+    - Example: ```"tsms"```, ```"dcnt"```, ```"name"```
 - **Value**: Data up to 16 bytes (4 blocks) in size
+    - Example: ```21```, ```"sogo"```
 - **M24C32 Device**: Pointer to the EEPROM device interface
+    - ```m24c32_t```
 
 ### Outputs
 
@@ -28,7 +31,7 @@ The EEPROM Directory API provides a simple interface for managing a key-value di
   - `EEPROM_ERROR_TOO_BIG`: Data size exceeds 16 bytes
   - Other error codes (see `eeprom_status.h`)
 
-- **Retrieved Data**: For `get_directory_value()` function, a pointer to a dynamically allocated buffer (caller must free)
+- **Retrieved Data**: For `get_directory_value()` function, a pointer to a dynamically allocated buffer *(caller must free)*
 
 ## API Functions
 

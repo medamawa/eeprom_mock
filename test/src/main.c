@@ -262,11 +262,11 @@ static void run_error_tests(void) {
 static void run_stress_tests(eeprom_directory_t *directory) {
 	printf("\n=== Stress Test: Multiple keys operations ===\n");
 	
-	const int num_keys = 50;
+	const int num_keys = 100;
 	char key_buf[4];
 	uint8_t value = 0;
 	
-	struct timespec start_all, end_all;
+	struct timespec start_all, end_setting, end_getting, end_deleting, end_all;
 	clock_gettime(CLOCK_MONOTONIC, &start_all);
 	
 	// Set many keys
@@ -280,6 +280,11 @@ static void run_stress_tests(eeprom_directory_t *directory) {
 			break;
 		}
 	}
+	
+	clock_gettime(CLOCK_MONOTONIC, &end_setting);
+	double setting_time = measure_time_us(&start_all, &end_setting);
+	printf("Setting data completed: %d keys in %.3f us (%.3f ms)\n",
+	    	num_keys, setting_time, setting_time / 1000.0);
 	
 	// Get all keys
 	printf("Getting %d keys...\n", num_keys);
@@ -298,6 +303,11 @@ static void run_stress_tests(eeprom_directory_t *directory) {
 		}
 	}
 	
+	clock_gettime(CLOCK_MONOTONIC, &end_getting);
+	double getting_time = measure_time_us(&end_setting, &end_getting);
+	printf("Getting data completed: %d keys in %.3f us (%.3f ms)\n",
+	    	num_keys, getting_time, getting_time / 1000.0);
+	
 	// Delete all keys
 	printf("Deleting %d keys...\n", num_keys);
 	for (int i = 0; i < num_keys; i++) {
@@ -307,6 +317,11 @@ static void run_stress_tests(eeprom_directory_t *directory) {
 			printf("ERROR: Failed to delete key %s at index %d\n", key_buf, i);
 		}
 	}
+	
+	clock_gettime(CLOCK_MONOTONIC, &end_deleting);
+	double deleting_time = measure_time_us(&end_getting, &end_deleting);
+	printf("Deleting data completed: %d keys in %.3f us (%.3f ms)\n",
+	    	num_keys, deleting_time, deleting_time / 1000.0);
 	
 	clock_gettime(CLOCK_MONOTONIC, &end_all);
 	double total_time = measure_time_us(&start_all, &end_all);

@@ -149,7 +149,7 @@ static void run_basic_tests(eeprom_directory_t *directory) {
 	// Test 1: Set a single byte value
 	uint8_t value1 = 116;
 	test_set_value(directory, "sogo", &value1, 1, "Set single byte value");
-	print_alloc_table(directory);
+	_print_alloc_table(directory);
 
 	// Test 2: Get the value back
 	test_get_value(directory, "sogo", "Get single byte value");
@@ -160,7 +160,7 @@ static void run_basic_tests(eeprom_directory_t *directory) {
 	
 	uint8_t value3 = 99;
 	test_set_value(directory, "key1", &value3, 1, "Set third key");
-	print_alloc_table(directory);
+	_print_alloc_table(directory);
 
 	// Test 4: Get all values
 	test_get_value(directory, "sogo", "Get first key");
@@ -170,7 +170,7 @@ static void run_basic_tests(eeprom_directory_t *directory) {
 	// Test 5: Set a multi-block value (larger than BLOCK_SIZE=4)
 	uint8_t large_value[] = {1, 2, 3, 4, 5, 6, 7, 8};
 	test_set_value(directory, "big", large_value, 8, "Set multi-block value (8 bytes)");
-	print_alloc_table(directory);
+	_print_alloc_table(directory);
 	test_get_value(directory, "big", "Get multi-block value");
 
 	// Test 6: Overwrite existing value
@@ -182,7 +182,7 @@ static void run_basic_tests(eeprom_directory_t *directory) {
 static void run_delete_tests(eeprom_directory_t *directory) {
 	// Test 7: Delete a value
 	test_delete_value(directory, "test", "Delete existing key");
-	print_alloc_table(directory);
+	_print_alloc_table(directory);
 	
 	// Test 8: Try to get deleted value (should fail)
 	test_get_value(directory, "test", "Get deleted key (should fail)");
@@ -192,23 +192,23 @@ static void run_delete_tests(eeprom_directory_t *directory) {
 
 	// Test 10: Delete another value and verify blocks are freed
 	test_delete_value(directory, "key1", "Delete second key");
-	print_alloc_table(directory);
+	_print_alloc_table(directory);
 
 	// Test 11: Set value after deletion (reuse freed blocks)
 	uint8_t value4 = 77;
 	test_set_value(directory, "new", &value4, 1, "Set value after deletion");
-	print_alloc_table(directory);
+	_print_alloc_table(directory);
 	test_get_value(directory, "new", "Get newly set value");
 
 	// Test 12: Delete all remaining values
 	test_delete_value(directory, "sogo", "Delete first key");
 	test_delete_value(directory, "big", "Delete multi-block key");
 	test_delete_value(directory, "new", "Delete last key");
-	print_alloc_table(directory);
+	_print_alloc_table(directory);
 
 	// Test 13: Verify all blocks are freed
 	printf("\n=== Final State ===\n");
-	print_alloc_table(directory);
+	_print_alloc_table(directory);
 }
 
 static void run_data_type_tests(eeprom_directory_t *directory) {
@@ -426,7 +426,7 @@ int main(void) {
 	}
 
 	printf("\n=== Initial State ===\n");
-	print_alloc_table(directory);
+	_print_alloc_table(directory);
 
 	run_basic_tests(directory);
 	run_delete_tests(directory);
